@@ -55,7 +55,22 @@
 
 		textarea {
 			width: 100%;
-			height: 150px;
+			height: 120px;
+		}
+
+		.feed-card {
+			background: rgba(255, 255, 255, 0.1);
+			padding: 15px;
+			border-radius: 12px;
+			margin-bottom: 20px;
+			backdrop-filter: blur(4px);
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+		}
+
+		.feed-card img {
+			max-width: 100%;
+			border-radius: 10px;
+			margin-top: 10px;
 		}
 
 		.photo-preview {
@@ -81,28 +96,27 @@
 
 		<!-- 主页 -->
 		<div id="home" class="section active">
-			<h2></h2>
-			<p>"And miles to go before I sleehihihip"</p>
+			<p>"And miles to go before I sleep"</p>
 		</div>
 
 		<!-- 日记 -->
 		<div id="diary" class="section">
 			<h2>写日记</h2>
-			<textarea id="diaryText"></textarea>
+
+			<textarea id="diaryText" placeholder="写点什么吧..."></textarea>
 
 			<h3>上传图片</h3>
 			<input type="file" id="imageInput" accept="image/*">
 			<img id="imagePreview" style="max-width: 200px; display:none; margin-top:10px;">
 
 			<br><br>
-			<button onclick="chooseFolder()">选择日记保存文件夹</button>
 			<button onclick="saveDiary()">保存日记</button>
 
-			<h3>日记列表</h3>
-			<ul id="diaryList"></ul>
+			<h3>日记流</h3>
+			<div id="diaryFeed"></div>
 		</div>
 
-		<!-- 照片上传 -->
+		<!-- 单独的照片上传 -->
 		<div id="photo" class="section">
 			<h2>上传照片</h2>
 			<input type="file" accept="image/*" onchange="previewPhoto(event)">
@@ -112,16 +126,17 @@
 	</div>
 
 	<script>
-		// 切换页面
 		function showSection(id) {
 			document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
 			document.getElementById(id).classList.add('active');
 		}
 
-		// 图片预览
+		// ----------------
+		// 处理图片预览
+		// ----------------
+		let currentImageData = null;
 		const imageInput = document.getElementById("imageInput");
 		const imagePreview = document.getElementById("imagePreview");
-		let currentImageData = null;
 
 		imageInput.addEventListener("change", function () {
 			const file = imageInput.files[0];
@@ -136,49 +151,33 @@
 			reader.readAsDataURL(file);
 		});
 
-		// 选择文件夹
-		async function chooseFolder() {
-			const dirHandle = await window.showDirectoryPicker();
-			window.diaryFolder = dirHandle;
-			alert("已选择日记保存文件夹！");
-		}
+		// ----------------
+		// 保存日记（仅展示在网页）
+		// ----------------
+		function saveDiary() {
+			const text = document.getElementById('diaryText').value.trim();
+			if (!text) return alert("日记内容不能为空");
 
-		// 保存成 TXT
-		async function saveDiaryFile(text) {
-			let content = text;
+			const feed = document.getElementById('diaryFeed');
+			const card = document.createElement('div');
+			card.className = "feed-card";
 
-			// 附加图片
+			let html = `<p>${text.replace(/\n/g, "<br>")}</p>`;
+
 			if (currentImageData) {
-				content += "\n\n[图片]\n" + currentImageData;
+				html += `<img src="${currentImageData}">`;
 			}
 
-			const name = `diary_${Date.now()}.txt`;
-			const fileHandle = await diaryFolder.getFileHandle(name, { create: true });
-			const writable = await fileHandle.createWritable();
-			await writable.write(content);
-			await writable.close();
-		}
+			card.innerHTML = html;
+			feed.prepend(card); // 最新的在最上面
 
-		// 保存日记（写入文件 + 显示网页）
-		async function saveDiary() {
-			const text = document.getElementById('diaryText').value;
-			if (!text.trim()) return alert("日记内容不能为空");
-
-			await saveDiaryFile(text);
-
-			const list = document.getElementById('diaryList');
-			const li = document.createElement('li');
-			li.textContent = new Date().toLocaleString() + "： " + text;
-			list.appendChild(li);
-
+			// 清空
 			document.getElementById('diaryText').value = "";
 			currentImageData = null;
 			imagePreview.style.display = "none";
-
-			alert("日记已保存！");
 		}
 
-		// 另一个照片上传的预览
+		// 单独的照片上传预览
 		function previewPhoto(e) {
 			const file = e.target.files[0];
 			document.getElementById('photoPreview').src = URL.createObjectURL(file);
